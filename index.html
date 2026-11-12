@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QWER Advent Calendar</title>
+<style>
+:root{--bg:#000;--white:#fff;--pink:#f47eb6;--blue:#1fb6f0;--lime:#b9d96c;--muted:#9a9a9a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--white);font-family:"Trebuchet MS",system-ui,sans-serif;min-height:100vh}
+header{text-align:center;padding:28px 16px 8px}
+h1{margin:0;font-size:clamp(28px,7vw,48px);letter-spacing:.04em}
+h1 span:nth-child(1){color:var(--white)}h1 span:nth-child(2){color:var(--pink)}h1 span:nth-child(3){color:var(--blue)}h1 span:nth-child(4){color:var(--lime)}
+header p{color:var(--muted);margin:8px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:14px;max-width:760px;margin:20px auto;padding:0 16px}
+.door{aspect-ratio:1;border-radius:22px;border:3px solid var(--c);background:#0b0b0b;color:var(--c);font:700 28px "Trebuchet MS",system-ui,sans-serif;cursor:pointer;position:relative;transition:transform .15s,background .15s}
+.door:hover{transform:scale(1.05)}
+.door.open{background:var(--c);color:#000}
+.door.locked{opacity:.55}
+.door small{position:absolute;bottom:6px;left:0;right:0;font-size:11px;font-weight:400}
+.door.shake{animation:sh .4s}
+@keyframes sh{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--white);color:#000;padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal.show{display:flex}
+.card{background:#0b0b0b;border:4px solid var(--c);border-radius:26px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:24px;text-align:center}
+.card h2{margin:0 0 14px;color:var(--c);font-size:26px}
+.card img,.card video{max-width:100%;border-radius:16px}
+.card p{line-height:1.55;font-size:18px;margin:0 0 12px}
+.btn{display:inline-block;background:var(--c);color:#000;font-weight:700;padding:10px 20px;border-radius:99px;text-decoration:none;border:0;cursor:pointer;font-size:16px;margin-top:8px}
+.card p{text-align:left}
+.mission{border:2px dashed var(--c);border-radius:16px;padding:12px 16px;margin:16px 0;text-align:left}
+.mission h3{margin:0 0 8px;color:var(--c);font-size:18px}
+.card .mission p{font-size:16px}
+footer{text-align:center;padding:8px 16px 32px}
+footer button{margin:4px;background:none;border:1px solid var(--muted);color:var(--muted);border-radius:99px;padding:6px 14px;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+<h1><span>Q</span><span>W</span><span>E</span><span>R</span><span id="ttl"> Advent Calendar</span></h1>
+<p id="sub">A new little door every day ✨</p>
+</header>
+<main class="grid" id="grid"></main>
+<footer><button id="preview">Preview mode: unlock all doors</button></footer>
+<div class="modal" id="modal"><div class="card" id="card"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ====== HIER DEINE INHALTE EINTRAGEN ======
+// type: "text" | "image" | "video"
+// text:  { type:"text", title:"…", text:"…" }
+// image: { type:"image", title:"…", src:"Bild als data:-URI", caption:"…" }
+// video: { type:"video", title:"…", src:"Video-Datei (.mp4/.webm) ODER Link", caption:"…" }
+const YEAR = 2026;
+const CONTENT = {
+1:{title:"Let the QWERmas Begin! 🥁",text:"What better way to kick off December than with the leader of QWER herself?\nToday’s door is dedicated to Chodan! A little magnet and a photocard to start your collection of Christmas surprises.\nAnd since Chodan is the drummer, let’s start this calendar with a bang!",mission:["Mini Mission: The Chodan Challenge","Grab two pencils, chopsticks, or anything remotely resembling drumsticks. Play your favorite QWER song and give us your most dramatic imaginary drum solo.\nBonus points for excessive headbanging."],video:["Today’s video","https://www.youtube.com/watch?v=WGm2HmXeeRI"]},
+2:{title:"The Ultimate QWER Dilemma 🤔",text:"Today we’re making life unnecessarily difficult!\nInside this door, you’ll find some QWER-themed Would You Rather cards.\nPrepare yourself for impossible decisions, questionable priorities, and the occasional existential crisis.",mission:["Mini Mission: No Escape!","Pick three cards and answer them honestly.\nNo cheating. No changing your mind. And absolutely NO choosing both!\nIf you want, share your most difficult dilemma with me. I want to know what kind of impossible choices I’ve created. 😂"],video:["Today’s Short","https://www.youtube.com/shorts/FrmuRCI3mvs"]},
+3:{title:"Stick With QWER! ✨",text:"Today’s surprise is small, colorful, and dangerously capable of ending up on every available surface.\nA few stickers and a photocard to brighten your day!\nPut them somewhere special, save them for a future project, or simply admire them.",mission:["Mini Mission: QWER Takeover","Find one object in your room that desperately needs some QWER decoration.\nYour laptop? Your notebook? Your water bottle?\nChoose wisely. This is a very important interior design decision."],video:["Today’s soundtrack","https://www.youtube.com/watch?v=H7K9NuM2TTc&list=RDH7K9NuM2TTc&start_radio=1&pp=ygUYcXdlciBtYWtlIHlvdXIgaGlnaGxpZ2h0oAcB"]},
+4:{title:"Take QWER Everywhere 🔑",text:"QWER at home? Obviously.\nQWER on your phone? Of course.\nBut what about QWER accompanying you on your daily adventures?\nToday’s little keychain makes sure you can carry a piece of QWER with you wherever you go.",mission:["Mini Mission: The World Tour","Take your keychain on its first adventure! It doesn’t have to be anything spectacular. A trip to the supermarket counts.\nCongratulations! Your keychain is now officially more well-traveled than some people."],video:["Today’s soundtrack","https://www.youtube.com/watch?v=FifVV3t38Vk"]},
+5:{title:"A Little Magenta Madness 🦊",text:"Time for some Magenta appreciation!\nToday’s door comes with a magnet and a photocard featuring our favorite chaos enthusiast.\nWhether it’s her bass playing, her humor, or her ability to turn perfectly normal situations into absolute chaos, Magenta certainly knows how to keep things interesting.",mission:["Mini Mission: Magenta Mode","Listen to a QWER song and focus entirely on the bass.\nThen perform a ten-second air-bass solo with the confidence of someone headlining a sold-out stadium.\nTalent is optional. Confidence is mandatory."],video:["Today’s Short","https://www.youtube.com/shorts/BBzTUdyHxj4"]},
+6:{title:"Build Your Own Siyeon! 🐹",text:"HAPPY ST. NICHOLAS DAY!\nHave you ever looked at Siyeon and thought: “You know what? I need one of those at home.”\nWELL, CONGRATULATIONS! Today, you can finally build your very own Siyeon!\nOkay, fine. It’s technically a hamster building-block set. But since Siyeon’s representative animal is a hamster, I think we can all agree that this is basically the same thing.\nSome assembly required. Singing ability not included.",mission:["Mini Mission: Operation Siyeon 2.0","Build your tiny hamster and give it a proper introduction.\nExtra points if you make it perform a QWER song.\nDisclaimer: Your homemade Siyeon may not be capable of hitting high notes, but she will always be there for you.\nNo refunds. 🐹💚"],video:["Bonus Siyeon content","https://www.youtube.com/watch?v=tT9ZzC8IZSc&pp=ygUMcXdlZXIgc2l5ZW9u"]},
+7:{title:"Dare to Dream(er) 📖",text:"Today’s gift is all about music, creativity, and a little bit of imagination.\nInside, you’ll find a workbook inspired by QWER’s Dreamer!\nGrab a pen, put on the song, and enjoy the activities at your own pace.\nThere are no grades, no deadlines, and absolutely no pressure. This is supposed to be fun!",mission:["Mini Mission: Main Character Energy","After finishing an activity, imagine your life as an anime.\nWhat would the title be? And would Dreamer be your opening song?"],video:["Today’s video","https://www.youtube.com/watch?v=91YrsgWQcEo"]},
+8:{title:"Donut Worry, Be Happy! 🍩",text:"Today’s gift comes with a very important piece of Siyeon trivia!\nDid you know that donuts are Siyeon’s favorite food?\nWhich means this little donut plushie is basically a tribute to our beloved hamster vocalist.\nUnfortunately, it isn’t edible. Trust me, I know. Very disappointing.\nBut unlike an actual donut, this one won’t disappear after three bites!",mission:["Mini Mission: The Siyeon Donut Appreciation Ceremony","Give your donut a name.\nThen decide whether it’s a snack, a pillow, or a tiny emotional-support companion.\nBonus points if you introduce it to your hamster from Day 6. They might become best friends."],video:["Bonus Siyeon content","https://weverse.io/qwer/artist/4-237900225?hl=ko"]},
+9:{title:"A Little Moment of Peace 🕯️",text:"Sometimes, the best gift is a little reminder to slow down.\nToday’s surprise is a candle, meant to bring a bit of warmth and coziness into the colder days of December.\nLight it safely, put on some QWER, and enjoy a peaceful moment.\nEven the biggest QWER fan needs a break from the chaos occasionally.",mission:["Mini Mission: QWER Cozy Hour","Your mission is to spend at least one song doing absolutely nothing productive.\nNo multitasking. No responsibilities. Just music and relaxation.\nYour QWER-certified relaxation session starts now!"],video:["Today’s video","https://www.youtube.com/watch?v=12mMS6GInJE"]},
+10:{title:"Hina Has Entered the Chat 🐱",text:"Another day, another QWER member to appreciate!\nToday’s door is dedicated to Hina, complete with a magnet and a photocard.\nCute? Absolutely. Talented? Obviously. Occasionally chaotic? Well, she IS a QWER member.",mission:["Mini Mission: The Hina Challenge","Pick your favorite Hina guitar moment and attempt to recreate her stage presence.\nNo actual guitar required. An imaginary guitar and excessive confidence are perfectly acceptable."],video:["Today’s soundtrack","https://www.youtube.com/watch?v=AlirzLFEHUI"]},
+11:{title:"A Little Luck Goes a Long Way 🐢",text:"Some days, a little extra luck can’t hurt.\nThat’s why today’s door contains some tiny turtle lucky charms!\nTurtles might not be the fastest creatures in the world, but they have an important lesson to teach us: You don’t always have to rush.\nSometimes, taking your time is exactly what you need.",mission:["Mini Mission: Turtle Mode Activated","Choose one thing you’ve been stressing about.\nFor today, give yourself permission to approach it at turtle speed.\nSlow progress is still progress. 🐢🍀"],video:["Today’s Short","https://www.youtube.com/shorts/CGbEMgZ1eKw"]},
+12:{title:"Halfway to Christmas! 🎄",text:"CONGRATULATIONS! You’ve officially survived twelve days of QWERmas!\nYour reward? Another magnet and photocard for your collection.\nWe’re halfway through the calendar, but don’t worry. The chaos is far from over.",mission:["Mini Mission: The Halfway Awards","It’s time for a very serious award ceremony! Choose your winners:\n🏆 Best surprise so far\n🏆 Cutest surprise so far\n🏆 Most unnecessary but absolutely amazing surprise\nAll decisions are final. Complaints may be submitted to the QWERmas Department of Chaos."],video:["Today’s video","https://www.youtube.com/watch?v=A8d2Gx91zwk"]},
+13:{title:"Guess QWER? 🔍",text:"Today, you become a detective!\nRemember the classic game Guess Who? Well, someone decided it needed considerably more QWER.\nYour mission is simple: Pick a mystery character and let your opponent figure out who it is by asking yes-or-no questions.",mission:["Mini Mission: Detective Siyeon","Play at least one round!\nBonus challenge: Try to win using the fewest questions possible. And if you’re feeling particularly chaotic, attempt to describe your mystery character without using their name.\nElementary, my dear Bawige. 🕵️"],video:["Today’s soundtrack","https://www.youtube.com/watch?v=jn-b0E2luMQ&list=RDjn-b0E2luMQ&start_radio=1&pp=oAcB"]},
+14:{title:"Heads or QWER? 🪙",text:"Feeling indecisive? Don’t worry, I’ve got you covered!\nToday’s surprise is your very own QWER coin, accompanied by another photocard.\nCan’t decide which QWER song to listen to? Flip it.\nUnsure which video to watch? Flip it.\nNeed to make an important life decision? Actually, maybe don’t leave that one to a coin.",mission:["Mini Mission: Let Fate Decide","Heads: listen to T.B.H.\nTails: listen to FAKE IDOL.\nFlip the coin and accept your musical destiny!"],video:["Today’s Short","https://www.youtube.com/shorts/8eeDSWOhvO8"]},
+15:{title:"Another Day, Another Photocard 📸",text:"You know what they say: You can never have too many photocards.\nOkay, maybe nobody actually says that, but they should.\nToday’s door brings another photocard and some stickers to add more QWER magic to your collection.",mission:["Mini Mission: The Ultimate Photocard Ranking","Choose your top three photocards from the calendar so far.\nBut here’s the catch: You’re only allowed three.\nYes, I know. I’m cruel."],video:["Today’s soundtrack","https://www.youtube.com/watch?v=t1uz-n3BFmQ&list=RDt1uz-n3BFmQ&start_radio=1&pp=ygURcXdlciBmZXJyaXMgd2hlZWygBwE%3D"]},
+16:{title:"Guess That QWER Song! 🎶",text:"Think you know QWER’s discography? Well, it’s time to put that confidence to the test!\nToday’s challenge is a little emoji quiz. Each combination of emojis represents a QWER song, and your mission is to figure out which one.\nNo cheating! No immediately looking up the answers! And definitely no blaming the emojis if you get something wrong!",mission:["Mini Mission: Emoji Master","Try to solve every song without hints.\nThen create your own emoji version of a QWER song and send it to me.\nLet’s see if I can figure it out!"],video:["Bonus listening","https://www.youtube.com/watch?v=ehsLHCltE6Q&list=RDehsLHCltE6Q&start_radio=1&pp=ygUPcXdlciBQaWNhcmVzcXVloAcB"]},
+17:{title:"A Little QWER Pick-Me-Up 💜",text:"We’re officially entering the final stretch before Christmas!\nToday’s door contains some stickers and another photocard, because even the smallest things can brighten an ordinary day.\nConsider this your daily dose of QWER happiness. Possible side effects include smiling, humming random QWER songs, and an uncontrollable desire to reorganize your photocard collection.",mission:["Mini Mission: QWER Happiness Check","Name one QWER moment that never fails to make you smile.\nBonus points if it’s a completely ridiculous one."],video:["Today’s video","https://www.youtube.com/watch?v=AtpNls8CZhA&list=RDAtpNls8CZhA&start_radio=1&pp=ygUOcXdlciBjaHJpc3RtYXOgBwE%3D"]},
+18:{title:"Stuck on QWER ✨",text:"Today’s combination is simple: A magnet and some stickers!\nOne can proudly live on your fridge or another magnetic surface, while the others can decorate whatever deserves a little extra personality.\nAt this point, I feel like QWER might slowly be taking over your surroundings.\nBut is that really a problem? I don’t think so.",mission:["Mini Mission: Operation QWER Domination","Count how many QWER-related items you now own.\nIf the number concerns you, don’t worry. It’s probably perfectly normal.\nProbably."],video:["Today’s soundtrack","https://www.youtube.com/watch?v=TcMV9YeT9Sw"]},
+19:{title:"A Little Chiikawa Break! 📖",text:"PLOT TWIST! Today’s surprise isn’t actually QWER-related.\nOr is it?\nAs you probably know, the QWER members are Chiikawa fans too! So today, we’re taking a little detour into the adorable world of Chiikawa.\nInside this door, you’ll find a Chiikawa book! Grab a cozy blanket, get comfortable, and enjoy some cute little adventures.\nAlthough, knowing Chiikawa, there’s probably going to be emotional damage somewhere along the way.",mission:["Mini Mission: Chiikawa Casting Director","Assign a Chiikawa character to every QWER member.\nWho would be Chiikawa? Who would be Hachiware? And who would bring the absolute maximum amount of Usagi energy?\nDefend your choices. This is serious business."],video:["Today’s Short","https://youtube.com/shorts/onS4EM9jVhQ?si=eaNozNgfEl_dqBn2"]},
+20:{title:"Something to Keep Close ✨",text:"Not every gift needs to be loud or colorful. Sometimes, something small and simple can be just as special.\nToday’s surprise is a necklace. Something you can wear, keep close, and hopefully enjoy for a long time.\nJust a little something from me to you. 💜",mission:["Mini Mission: Your Personal Soundtrack","Choose a QWER song that means something special to you.\nIt doesn’t have to be your favorite song. Just one that brings back a memory, makes you feel understood, or reminds you of something important."],video:["Today’s video","https://www.youtube.com/watch?v=pifz9JH1Re8"]},
+21:{title:"The Siyeon Appreciation Society 🐹💚",text:"ATTENTION, ATTENTION! Today’s door is dedicated to someone very important.\nSIYEON!\nSince she’s your bias, I couldn’t possibly make a QWER Advent calendar without giving her another special moment.\nToday’s magnet and photocard are a little addition to your Siyeon collection.",mission:["Mini Mission: Certified Siyeon Enthusiast","List three reasons why Siyeon is your bias.\nThen attempt to choose your absolute favorite Siyeon moment. Good luck with that second part.\nThe Officially Unofficial Siyeon Appreciation Society approves this message."],video:["Bonus video","https://www.youtube.com/shorts/SVUCVZe9e_o"]},
+22:{title:"Two Days to Go! 🎄",text:"Can you believe we’re almost at Christmas already?!\nToday’s door brings you some more stickers and a photocard. Another little surprise before we reach the final two days!\nI hope opening these gifts has been as much fun for you as creating them has been for me. And trust me, I’ve saved some particularly special things for the end.",mission:["Mini Mission: The QWER Meme Factory","Choose your funniest QWER photo.\nNow give it the most ridiculous caption you can possibly think of.\nBonus points if the result makes absolutely no sense without context."],video:["Today’s soundtrack","https://youtu.be/-C6UVoWOdug?si=bkOD2sOoFzsV5Cs5"]},
+23:{title:"The Sacred Siyeon Shrine 🐹🕯️",text:"Okay. Listen.\nI know this might look slightly ridiculous, but hear me out.\nEvery dedicated Siyeon fan deserves a tiny shrine, right? RIGHT?!\nToday’s gift is your very own portable Siyeon appreciation station! Open it, display it, admire it, and give it the respect it deserves.\nIs this a little excessive? Maybe.\nAm I sorry? ABSOLUTELY NOT.",mission:["Mini Mission: The Grand Shrine Opening","Find the perfect place to display your tiny Siyeon shrine. Then perform the official opening ceremony:\n1. Open the shrine dramatically.\n2. Say “All hail the hamster queen!”\n3. Admire Siyeon’s greatness for at least five seconds.\n4. Congratulations. The shrine is now officially operational.\nPlease note that this shrine is not guaranteed to improve your photocard pulls, but we can dream."],video:["Today’s Short","https://www.youtube.com/shorts/kdSYMHBEf9w"]},
+24:{title:"MERRY QWER-MAS! 🃏",text:"We’ve officially reached the final day!\nAnd I wanted to end this little adventure with something special.\nIntroducing... ALL IN FOR QWER!\nYour very own QWER-themed poker deck! Whether you’re bluffing your way to victory, going all in, or simply admiring the cards, I hope this game brings you lots of fun.",mission:["Final Mission: The Ultimate QWERkerface","Look at your favorite QWER photocard.\nNow try to maintain a completely serious poker face for ten seconds.\nNo smiling. No laughing. Absolutely no fangirling.\nIf you fail, congratulations. You’re a perfectly normal QWER fan!"],video:["Final Short","https://www.youtube.com/shorts/O_44CUsZW28"],after:"Before we finish, I want to say something.\nThank you for letting me share this little creative project with you. What started as a random idea turned into something I genuinely loved making.\nI know we’re just two people who met through the internet, but I wanted to create something that would bring a little happiness into your December.\nI hope these 24 days gave you something to smile about, a few good laughs, and plenty of QWER moments.\nMerry Christmas! And remember...\nKeep your QWERkerface. 🃏🤍🩷🩵💚"}
+};
+const COLORS = ["#ffffff","#f47eb6","#1fb6f0","#b9d96c"];
+const I18N = {
+  en:{sub:"A new little door every day ✨",title:"Advent Calendar",locked:n=>"Not yet! This door opens on December "+n+".",prevOn:"End preview mode",prevOff:"Preview mode: unlock all doors",close:"Close",video:"▶ Watch video",door:n=>"Door "+n,empty:"No content added yet."}
+};
+const lang = "en";
+const T = () => I18N[lang];
+// ==========================================
+
+const grid = document.getElementById("grid"), modal = document.getElementById("modal"),
+      card = document.getElementById("card"), toast = document.getElementById("toast");
+let opened = {}, preview = false, tt;
+try { opened = JSON.parse(localStorage.getItem("qwer-advent") || "{}"); } catch (e) {}
+
+const isUnlocked = n => preview || new Date() >= new Date(YEAR, 11, n);
+function say(msg){ toast.textContent = msg; toast.classList.add("show"); clearTimeout(tt); tt = setTimeout(()=>toast.classList.remove("show"), 2200); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function render(){
+  grid.innerHTML = "";
+  for (let n = 1; n <= 24; n++){
+    const b = document.createElement("button");
+    const un = isUnlocked(n);
+    b.className = "door" + (opened[n] ? " open" : "") + (un ? "" : " locked");
+    b.style.setProperty("--c", COLORS[(n-1) % 4]);
+    b.innerHTML = n + (un ? "" : "<small>🔒</small>");
+    b.onclick = () => openDoor(n, b);
+    grid.appendChild(b);
+  }
+}
+
+const P = s => String(s).split("\n").map(l => "<p>" + esc(l) + "</p>").join("");
+function rich(c){
+  let h = P(c.text || "");
+  if (c.mission) h += '<div class="mission"><h3>🎯 ' + esc(c.mission[0]) + "</h3>" + P(c.mission[1]) + "</div>";
+  if (c.video) h += '<a class="btn" href="' + esc(c.video[1]) + '" target="_blank" rel="noopener">▶ ' + esc(c.video[0]) + "</a>";
+  if (c.after) h += '<div style="margin-top:16px">' + P(c.after) + "</div>";
+  return h;
+}
+function openDoor(n, el){
+  if (!isUnlocked(n)){
+    el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
+    say(T().locked(n));
+    return;
+  }
+  const raw = CONTENT[n];
+  const c = raw ? Object.assign({}, raw, lang === "en" && raw.en ? raw.en : {}) : {type:"text", title:T().door(n), text:T().empty};
+  const col = COLORS[(n-1) % 4];
+  let body = "";
+  if (c.mission || c.video){
+    body = rich(c);
+  } else if (c.type === "image"){
+    body = '<img src="' + esc(c.src) + '" alt="' + esc(c.title || "") + '">' + (c.caption ? "<p>" + esc(c.caption) + "</p>" : "");
+  } else if (c.type === "video"){
+    body = /\.(mp4|webm)(\?|$)|^data:video/i.test(c.src)
+      ? '<video controls playsinline src="' + esc(c.src) + '"></video>'
+      : '<a class="btn" href="' + esc(c.src) + '" target="_blank" rel="noopener">' + T().video + '</a>';
+    if (c.caption) body += "<p>" + esc(c.caption) + "</p>";
+  } else {
+    body = "<p>" + esc(c.text || "").replace(/\n/g, "<br>") + "</p>";
+  }
+  card.style.setProperty("--c", col);
+  card.innerHTML = "<h2>" + n + " · " + esc(c.title || "") + "</h2>" + body + '<br><button class="btn" id="close">' + T().close + '</button>';
+  modal.classList.add("show");
+  document.getElementById("close").onclick = closeModal;
+  if (!opened[n]){
+    opened[n] = 1;
+    try { localStorage.setItem("qwer-advent", JSON.stringify(opened)); } catch (e) {}
+    render();
+  }
+}
+function closeModal(){ modal.classList.remove("show"); card.innerHTML = ""; }
+modal.onclick = e => { if (e.target === modal) closeModal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.title = "QWER " + T().title;
+  document.getElementById("ttl").textContent = " " + T().title;
+  document.getElementById("sub").textContent = T().sub;
+  document.getElementById("preview").textContent = preview ? T().prevOn : T().prevOff;
+  closeModal();
+  render();
+}
+document.getElementById("preview").onclick = function(){ preview = !preview; applyLang(); };
+applyLang();
+</script>
+</body>
+</html>
